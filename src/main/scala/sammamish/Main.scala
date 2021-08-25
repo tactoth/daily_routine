@@ -15,7 +15,7 @@ object Main extends ActionListener {
   private val relaxColor = ColorPair(new Color(0x1B5E20), new Color(0x43A047))
 
   private val frame: JFrame = new JFrame()
-  private val timer: Timer = new Timer(5 * 1000, this)
+  private val timer: Timer = new Timer(15 * 1000, this)
 
   // progressing
   private var currentItem: Option[Item] = None
