@@ -6,17 +6,18 @@ import java.awt._
 import java.awt.event.{ActionEvent, ActionListener, WindowAdapter, WindowEvent}
 import java.io.FileInputStream
 import java.util.Calendar
+import java.util.concurrent.Executors
 import javax.swing._
 import scala.ref.WeakReference
 
-object Main extends ActionListener {
-  private val DEBUG = false
+class DailyRoutineApp(debug: Boolean) extends ActionListener {
   private val workColor = ColorPair(new Color(0x1A237E), new Color(0x5C6BC0))
   private val breakColor = ColorPair(new Color(0x006064), new Color(0x00BCD4))
   private val relaxColor = ColorPair(new Color(0x1B5E20), new Color(0x43A047))
 
+  private val executor = Executors.newSingleThreadExecutor()
   private val frame: JFrame = new JFrame()
-  private val timer: Timer = new Timer(if (DEBUG) 1000 else (30 * 1000), this)
+  private val timer: Timer = new Timer(if (debug) 1000 else 30 * 1000, this)
 
   // progressing
   private var currentDayOfYear = -1
@@ -43,6 +44,7 @@ object Main extends ActionListener {
         super.windowClosed(e)
         timer.stop()
         closeSound()
+        executor.shutdown()
       }
     })
 
@@ -153,14 +155,14 @@ object Main extends ActionListener {
       case ItemType.Relax => "data/zapsplat_musical_heavely_euphoria_happy_dreamy_swell_001_1860950.mp3" // relax or end of work
     }
 
-    new Thread(new Runnable {
+    executor.execute(new Runnable {
       override def run(): Unit = {
         val player = new Player(new FileInputStream(musicFile))
         currentPlayer = Some(new WeakReference[Player](player))
         player.play()
         player.close()
       }
-    }).start()
+    })
   }
 
   private def findCurrentItem(calendar: Calendar): Option[Item] = {
@@ -261,7 +263,7 @@ object Main extends ActionListener {
   private val debugStarted = System.currentTimeMillis()
 
   private def getCalendar = {
-    if (DEBUG) {
+    if (debug) {
       val calendar = Calendar.getInstance()
       val fakeCal = Calendar.getInstance()
       fakeCal.set(2021, 7, 31, 22, 30)
@@ -272,7 +274,10 @@ object Main extends ActionListener {
     }
   }
 
+}
+
+object DailyRoutineApp {
   def main(args: Array[String]): Unit = {
-    Main.show()
+    new DailyRoutineApp(args.contains("-d")).show()
   }
 }
