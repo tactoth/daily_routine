@@ -11,6 +11,7 @@ import javax.swing._
 import scala.ref.WeakReference
 
 class DailyRoutineApp(debug: Boolean) extends ActionListener {
+  private val planningColor = ColorPair(new Color(0xBF360C), new Color(0xFF5722))
   private val workColor = ColorPair(new Color(0x1A237E), new Color(0x5C6BC0))
   private val breakColor = ColorPair(new Color(0x006064), new Color(0x00BCD4))
   private val relaxColor = ColorPair(new Color(0x1B5E20), new Color(0x43A047))
@@ -73,6 +74,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       val isPast = currentItem.exists(_.time.compareTo(item.time) > 0)
 
       val colorPair = item.itemType match {
+        case ItemType.Planning => planningColor
         case ItemType.Work => workColor
         case ItemType.Relax => relaxColor
         case ItemType.Break => breakColor
@@ -89,7 +91,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       }
 
       if (item.itemType != ItemType.Break || isActive) {
-        addText(f"${item.time.hour}%02d:${item.time.minute}%02d", if (isActive) 24 else 14)
+        addText(f"${item.time.hour}%02d:${item.time.minute}%02d", if (isActive) 32 else 14)
       }
       addText(item.name.toUpperCase, 14)
 
@@ -152,8 +154,8 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     // sounds downloaded from https://www.zapsplat.com/sound-effect-category/church-bells/
     val musicFile = itemType match {
       case ItemType.Break => "data/zapsplat_musical_retro_classic_vibraphone_mystery_tone_002_45104.mp3" // break
-      case ItemType.Work => "data/audeption_church_bell_with_street_and_some_birds_010.mp3" // work
       case ItemType.Relax => "data/zapsplat_musical_heavely_euphoria_happy_dreamy_swell_001_1860950.mp3" // relax or end of work
+      case _ /*ItemType.Planning || ItemType.Work */ => "data/audeption_church_bell_with_street_and_some_birds_010.mp3" // work
     }
 
     executor.execute(new Runnable {
@@ -193,7 +195,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
   }
 
   object ItemType extends Enumeration {
-    val Work, Break, Relax = Value
+    val Planning, Work, Break, Relax = Value
   }
 
   private def maybeAdvanceToNewDay(calendar: Calendar): Boolean = {
@@ -218,7 +220,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
 
     // morning
     val morningATypical = Seq(
-      Item(SimpleTime(9, 30), "Plan the day", ItemType.Work),
+      Item(SimpleTime(9, 30), "Plan the day", ItemType.Planning),
       Item(SimpleTime(9, 55), "Short break", ItemType.Break),
       Item(SimpleTime(10, 0), "Focused block A", ItemType.Work)
     )
@@ -253,11 +255,11 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     else
       Seq(morningATypical
         .head
-        .copy(name = if (isBeginOfMonth) "Begin of month" else "Begin of week"))) ++
+        .copy(name = if (isBeginOfMonth) "Begin of month" else "Begin of week", itemType = ItemType.Planning))) ++
       morningB ++ afternoon ++
       (if (!isEndOfMonth && !isEndOfWeek) eveningTypical
       else
-        Seq(eveningTypical.head.copy(name = if (isEndOfMonth) "End of Month" else "End of Week"))) :+
+        Seq(eveningTypical.head.copy(name = if (isEndOfMonth) "End of Month" else "End of Week", itemType = ItemType.Planning))) :+
       endItem sortBy (_.time)
   }
 
