@@ -6,8 +6,8 @@ import java.awt._
 import java.awt.event.{ActionEvent, ActionListener, WindowAdapter, WindowEvent}
 import java.io.FileInputStream
 import java.util.Calendar
-import java.util.concurrent.Executors
 import javax.swing._
+import scala.ref.WeakReference
 
 object Main extends ActionListener {
   private val workColor = ColorPair(new Color(0x1A237E), new Color(0x5C6BC0))
@@ -17,10 +17,9 @@ object Main extends ActionListener {
   private val frame: JFrame = new JFrame()
   private val timer: Timer = new Timer(5 * 1000, this)
 
-  private val soundExecutor = Executors.newSingleThreadExecutor()
-
   // progressing
   private var currentItem: Option[Item] = None
+  @volatile private var currentPlayer: Option[WeakReference[Player]] = None
 
   private val items = Seq(
     // morning
@@ -54,7 +53,7 @@ object Main extends ActionListener {
     frame.setLayout(new GridBagLayout())
 
     // add ui
-    this.currentItem = findCurrentItem()
+    currentItem = findCurrentItem()
     populateItems()
 
     // set layout
@@ -62,19 +61,23 @@ object Main extends ActionListener {
 
     // show window
     frame.setTitle("Daily Routine")
-    frame.setAlwaysOnTop(true)
-    frame.setVisible(true)
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     frame.addWindowListener(new WindowAdapter() {
       override def windowClosed(e: WindowEvent) {
         super.windowClosed(e)
         timer.stop()
+        closeSound()
       }
     })
 
     frame.pack()
     val screenSize = Toolkit.getDefaultToolkit.getScreenSize
     frame.setBounds(screenSize.width - frame.getWidth, 0, frame.getWidth, frame.getHeight)
+
+    frame.setAlwaysOnTop(true)
+    frame.setVisible(true)
+
+    currentItem.map(_.itemType).foreach(playMusicFor) // play music on launch
   }
 
   private def populateItems() {
@@ -131,19 +134,36 @@ object Main extends ActionListener {
     populateItems()
     frame.revalidate()
 
-    {
-      // sounds downloaded from https://www.zapsplat.com/sound-effect-category/church-bells/
-      val musicFile = currentItem match {
-        case Some(item) if item.itemType == ItemType.Break => "data/zapsplat_musical_retro_classic_vibraphone_mystery_tone_002_45104.mp3" // break
-        case Some(item) if item.itemType == ItemType.Work => "data/audeption_church_bell_with_street_and_some_birds_010.mp3" // work
-        case _ => "data/zapsplat_musical_heavely_euphoria_happy_dreamy_swell_001_1860950.mp3" // relax or end of work
+    playMusicFor(currentItem.map(_.itemType).getOrElse(ItemType.Relax))
+  }
+
+  private def closeSound(): Unit = {
+    for (playerRef <- currentPlayer) {
+      val maybePlayer = playerRef.get
+      for (player <- maybePlayer) {
+        player.close()
       }
-      soundExecutor.submit(new Runnable {
-        override def run(): Unit = {
-          new Player(new FileInputStream(musicFile)).play()
-        }
-      })
     }
+  }
+
+  private def playMusicFor(itemType: ItemType.Value): Unit = {
+    closeSound()
+
+    // sounds downloaded from https://www.zapsplat.com/sound-effect-category/church-bells/
+    val musicFile = itemType match {
+      case ItemType.Break => "data/zapsplat_musical_retro_classic_vibraphone_mystery_tone_002_45104.mp3" // break
+      case ItemType.Work => "data/audeption_church_bell_with_street_and_some_birds_010.mp3" // work
+      case ItemType.Relax => "data/zapsplat_musical_heavely_euphoria_happy_dreamy_swell_001_1860950.mp3" // relax or end of work
+    }
+
+    new Thread(new Runnable {
+      override def run(): Unit = {
+        val player = new Player(new FileInputStream(musicFile))
+        currentPlayer = Some(new WeakReference[Player](player))
+        player.play()
+        player.close()
+      }
+    }).start()
   }
 
   private def findCurrentItem(): Option[Item] = {
