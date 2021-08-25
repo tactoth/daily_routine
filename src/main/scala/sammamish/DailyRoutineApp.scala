@@ -17,7 +17,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
 
   private val executor = Executors.newSingleThreadExecutor()
   private val frame: JFrame = new JFrame()
-  private val timer: Timer = new Timer(if (debug) 1000 else 30 * 1000, this)
+  private val timer: Timer = new Timer(if (debug) 1000 else 15 * 1000, this)
 
   // progressing
   private var currentDayOfYear = -1
@@ -88,7 +88,9 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
         panel.add(view)
       }
 
-      addText(f"${item.time.hour}%02d:${item.time.minute}%02d", 14)
+      if (item.itemType != ItemType.Break || isActive) {
+        addText(f"${item.time.hour}%02d:${item.time.minute}%02d", if (isActive) 24 else 14)
+      }
       addText(item.name.toUpperCase, 14)
 
       // customize the cell
@@ -266,7 +268,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       val calendar = Calendar.getInstance()
       val fakeCal = Calendar.getInstance()
       fakeCal.set(2021, 7, 31, 9, 30)
-      calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * 1000L)
+      calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * 500)
       calendar
     } else {
       Calendar.getInstance()
