@@ -51,10 +51,6 @@ object Main extends ActionListener {
 
 
   def show() {
-    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
-    val w = 180
-    val h = 720
-    frame.setBounds(screenSize.width - w, 0, w, h)
     frame.setLayout(new GridBagLayout())
 
     // add ui
@@ -75,6 +71,10 @@ object Main extends ActionListener {
         timer.stop()
       }
     })
+
+    frame.pack()
+    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
+    frame.setBounds(screenSize.width - frame.getWidth, 0, frame.getWidth, frame.getHeight)
   }
 
   private def populateItems() {
@@ -92,30 +92,31 @@ object Main extends ActionListener {
       panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS))
 
       val isActive = currentItem.contains(item)
+      val isPast = currentItem.exists(_.time.compareTo(item.time) > 0)
+
       val colorPair = item.itemType match {
         case ItemType.Work => workColor
         case ItemType.Relax => relaxColor
         case ItemType.Break => breakColor
       }
       panel.setBackground(if (isActive) colorPair.primary else colorPair.secondary)
-
-      val textColor = if (isActive) Color.WHITE else Color.LIGHT_GRAY
+      val textColor = if (!isPast) Color.WHITE else Color.LIGHT_GRAY
 
       // build internals
-      val time = new JLabel(f"${item.time.hour}%02d:${item.time.minute}%02d")
-      time.setForeground(textColor)
-      panel.add(time)
-      time.setFont(new Font("Serif", Font.BOLD, 16))
+      def addText(text: String, textSize: Int): Unit = {
+        val view = new JLabel(text)
+        view.setForeground(textColor)
+        view.setFont(new Font("Serif", Font.PLAIN, textSize))
+        panel.add(view)
+      }
 
-      val name = new JLabel(item.name.toUpperCase)
-      name.setForeground(textColor)
-      name.setFont(new Font("Serif", Font.PLAIN, 14))
-      panel.add(name)
+      addText(f"${item.time.hour}%02d:${item.time.minute}%02d", 14)
+      addText(item.name.toUpperCase, 14)
 
       // customize the cell
       val duration = nextItem.time.toMinutes - item.time.toMinutes
       bagConstraints.gridy += 1
-      bagConstraints.ipadx = if (isActive) 20 else 10
+      bagConstraints.ipadx = if (isActive) 10 else 5
       bagConstraints.ipady = math.max(0, duration - 30) / 2
       frame.add(panel, bagConstraints)
     }
