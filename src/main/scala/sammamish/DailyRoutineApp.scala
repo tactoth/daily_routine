@@ -48,9 +48,6 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       }
     })
 
-    frame.pack()
-    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
-    frame.setBounds(screenSize.width - frame.getWidth, 0, frame.getWidth, frame.getHeight)
 
     frame.setAlwaysOnTop(true)
     frame.setVisible(true)
@@ -128,6 +125,8 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
 
       if (isItemsUpdated) {
         frame.pack()
+        val screenSize = Toolkit.getDefaultToolkit.getScreenSize
+        frame.setBounds(screenSize.width - frame.getWidth, 0, frame.getWidth, frame.getHeight)
       }
     }
 
@@ -266,7 +265,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     if (debug) {
       val calendar = Calendar.getInstance()
       val fakeCal = Calendar.getInstance()
-      fakeCal.set(2021, 7, 31, 22, 30)
+      fakeCal.set(2021, 7, 31, 9, 30)
       calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * 1000L)
       calendar
     } else {
