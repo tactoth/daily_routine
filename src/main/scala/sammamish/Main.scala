@@ -10,57 +10,33 @@ import javax.swing._
 import scala.ref.WeakReference
 
 object Main extends ActionListener {
+  private val DEBUG = false
   private val workColor = ColorPair(new Color(0x1A237E), new Color(0x5C6BC0))
   private val breakColor = ColorPair(new Color(0x006064), new Color(0x00BCD4))
   private val relaxColor = ColorPair(new Color(0x1B5E20), new Color(0x43A047))
 
   private val frame: JFrame = new JFrame()
-  private val timer: Timer = new Timer(15 * 1000, this)
+  private val timer: Timer = new Timer(if (DEBUG) 1000 else (30 * 1000), this)
 
   // progressing
+  private var currentDayOfYear = -1
+  private var currentItems: Seq[Item] = Seq.empty
   private var currentItem: Option[Item] = None
   @volatile private var currentPlayer: Option[WeakReference[Player]] = None
 
-  private val items = Seq(
-    // morning
-    Item(SimpleTime(9, 30), "Plan the day", ItemType.Work),
-    Item(SimpleTime(9, 55), "Short break", ItemType.Break),
-    Item(SimpleTime(10, 0), "Focused block A", ItemType.Work),
-    Item(SimpleTime(11, 15), "Stretch break", ItemType.Break),
-    Item(SimpleTime(11, 30), "Focused block B", ItemType.Work),
-    Item(SimpleTime(12, 45), "Lunch break", ItemType.Relax),
 
-    // afternoon
-    Item(SimpleTime(14, 0), "Focused block C", ItemType.Work),
-    Item(SimpleTime(15, 15), "Break", ItemType.Break),
-    Item(SimpleTime(15, 30), "Focused block D", ItemType.Work),
-    Item(SimpleTime(16, 45), "Exercise Break", ItemType.Break),
-    Item(SimpleTime(17, 0), "Focused block E", ItemType.Work),
-    Item(SimpleTime(18, 0), "Family time", ItemType.Relax),
-
-    // evening
-    Item(SimpleTime(19, 30), "Evening work time 1", ItemType.Work),
-    Item(SimpleTime(20, 45), "Break", ItemType.Break),
-    Item(SimpleTime(21, 0), "Evening closing time", ItemType.Work),
-
-    // end day
-    Item(SimpleTime(21, 30), "END", ItemType.Relax)
-  ).sortBy(_.time)
-  private val itemPairs = items.zip(items.tail)
-
+  private def itemPairs = currentItems.zip(currentItems.tail)
 
   def show() {
     frame.setLayout(new GridBagLayout())
 
     // add ui
-    currentItem = findCurrentItem()
-    populateItems()
+    maybeAdvanceDayOrItem()
 
     // set layout
     timer.start()
 
     // show window
-    frame.setTitle("Daily Routine")
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     frame.addWindowListener(new WindowAdapter() {
       override def windowClosed(e: WindowEvent) {
@@ -126,15 +102,36 @@ object Main extends ActionListener {
   }
 
   override def actionPerformed(maybeEvent: ActionEvent) { // timer event
-    val currentItem = findCurrentItem()
-    if (currentItem == this.currentItem) return
+    maybeAdvanceDayOrItem()
+  }
+
+  private def maybeAdvanceDayOrItem() {
+    val calendar = getCalendar
+    val isItemsUpdated = maybeAdvanceToNewDay(calendar)
+    val currentItem = findCurrentItem(calendar)
+
+    val isItemUpdated: Boolean = {
+      if (currentItem == this.currentItem) false
+      else {
+        this.currentItem = currentItem
+        true
+      }
+    }
 
     // we've entered a new item
-    this.currentItem = currentItem
-    populateItems()
-    frame.revalidate()
+    if (isItemsUpdated || isItemUpdated) {
+      populateItems()
+      frame.revalidate()
+      frame.repaint()
 
-    playMusicFor(currentItem.map(_.itemType).getOrElse(ItemType.Relax))
+      if (isItemsUpdated) {
+        frame.pack()
+      }
+    }
+
+    if (isItemUpdated) {
+      playMusicFor(currentItem.map(_.itemType).getOrElse(ItemType.Relax))
+    }
   }
 
   private def closeSound(): Unit = {
@@ -166,22 +163,17 @@ object Main extends ActionListener {
     }).start()
   }
 
-  private def findCurrentItem(): Option[Item] = {
+  private def findCurrentItem(calendar: Calendar): Option[Item] = {
     val dateOrdering = implicitly[Ordering[SimpleTime]]
     import dateOrdering._
 
-    val now = getNow
-    itemPairs.find { case (first, second) => first.time <= now && second.time > now }.map { case (first, _) => first }
-  }
-
-
-  private def getNow = {
-    val calendar = Calendar.getInstance()
-    SimpleTime(
+    val now = SimpleTime(
       calendar.get(Calendar.HOUR_OF_DAY),
       calendar.get(Calendar.MINUTE)
     )
+    itemPairs.find { case (first, second) => first.time <= now && second.time > now }.map { case (first, _) => first }
   }
+
 
   case class ColorPair(primary: Color, secondary: Color)
 
@@ -199,6 +191,85 @@ object Main extends ActionListener {
 
   object ItemType extends Enumeration {
     val Work, Break, Relax = Value
+  }
+
+  private def maybeAdvanceToNewDay(calendar: Calendar): Boolean = {
+    val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
+    if (dayOfYear == currentDayOfYear) {
+      return false
+    }
+
+    frame.setTitle(s"${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH) + 1}")
+    currentDayOfYear = dayOfYear
+    currentItems = buildItems(calendar)
+    true
+  }
+
+  private def buildItems(calendar: Calendar) = {
+    val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+    val isBeginOfMonth = dayOfMonth == 1
+    val isEndOfMonth = dayOfMonth == calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+    val isBeginOfWeek = dayOfWeek == 2
+    val isEndOfWeek = dayOfWeek == 1 // sunday is first
+
+    // morning
+    val morningATypical = Seq(
+      Item(SimpleTime(9, 30), "Plan the day", ItemType.Work),
+      Item(SimpleTime(9, 55), "Short break", ItemType.Break),
+      Item(SimpleTime(10, 0), "Focused block A", ItemType.Work)
+    )
+
+    val morningB = Seq(
+      Item(SimpleTime(11, 15), "Stretch break", ItemType.Break),
+      Item(SimpleTime(11, 30), "Focused block B", ItemType.Work),
+      Item(SimpleTime(12, 45), "Lunch break", ItemType.Relax)
+    )
+
+    // afternoon
+    val afternoon = Seq(
+      Item(SimpleTime(14, 0), "Focused block C", ItemType.Work),
+      Item(SimpleTime(15, 15), "Break", ItemType.Break),
+      Item(SimpleTime(15, 30), "Focused block D", ItemType.Work),
+      Item(SimpleTime(16, 45), "Exercise Break", ItemType.Break),
+      Item(SimpleTime(17, 0), "Focused block E", ItemType.Work),
+      Item(SimpleTime(18, 0), "Family time", ItemType.Relax)
+    )
+
+    // evening
+    val eveningTypical = Seq(
+      Item(SimpleTime(19, 30), "Evening work time 1", ItemType.Work),
+      Item(SimpleTime(20, 45), "Break", ItemType.Break),
+      Item(SimpleTime(21, 0), "Evening closing time", ItemType.Work)
+    )
+
+    val endItem = Item(SimpleTime(21, 30), "END", ItemType.Relax)
+
+    (if (!isBeginOfMonth && !isBeginOfWeek)
+      morningATypical
+    else
+      Seq(morningATypical
+        .head
+        .copy(name = if (isBeginOfMonth) "Begin of month" else "Begin of week"))) ++
+      morningB ++ afternoon ++
+      (if (!isEndOfMonth && !isEndOfWeek) eveningTypical
+      else
+        Seq(eveningTypical.head.copy(name = if (isEndOfMonth) "End of Month" else "End of Week"))) :+
+      endItem sortBy (_.time)
+  }
+
+  private val debugStarted = System.currentTimeMillis()
+
+  private def getCalendar = {
+    if (DEBUG) {
+      val calendar = Calendar.getInstance()
+      val fakeCal = Calendar.getInstance()
+      fakeCal.set(2021, 7, 31, 22, 30)
+      calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * 1000L)
+      calendar
+    } else {
+      Calendar.getInstance()
+    }
   }
 
   def main(args: Array[String]): Unit = {
