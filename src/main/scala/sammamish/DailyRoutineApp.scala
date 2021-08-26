@@ -6,7 +6,7 @@ import java.awt._
 import java.awt.event.{ActionEvent, ActionListener, WindowAdapter, WindowEvent}
 import java.io.FileInputStream
 import java.util.Calendar
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, TimeUnit}
 import javax.swing._
 import scala.ref.WeakReference
 
@@ -141,17 +141,18 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     }
 
     // schedule next update
+    val maxDelay = TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES)
     val delay = currentPair match {
-      case None => 60 * 1000 // 1min (we are inactive, if we set this to a value too long  when we are back....)
+      case None => maxDelay // 1min (we are inactive, if we set this to a value too long  when we are back....)
       case Some((_, next)) => // estimate
         val now = calendar.getTimeInMillis
         calendar.set(Calendar.HOUR_OF_DAY, next.time.hour)
         calendar.set(Calendar.MINUTE, next.time.minute)
-        (calendar.getTimeInMillis - now).toInt
+        (calendar.getTimeInMillis - now)
     }
 
     // we are good, internally, absolute time is used, see timerQueue().addTimer, javax.swing.TimerQueue.DelayedTimer.getDelay
-    timer.setInitialDelay(delay / debugTimeScale)
+    timer.setInitialDelay(math.min(delay / debugTimeScale, maxDelay).toInt)
     timer.start()
   }
 
