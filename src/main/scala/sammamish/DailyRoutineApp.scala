@@ -149,7 +149,9 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
         calendar.set(Calendar.MINUTE, next.time.minute)
         (calendar.getTimeInMillis - now).toInt
     }
-    timer.setInitialDelay(delay / debugTimeScale) // not sure how this works when device is in stand by mode
+
+    // we are good, internally, absolute time is used, see timerQueue().addTimer, javax.swing.TimerQueue.DelayedTimer.getDelay
+    timer.setInitialDelay(delay / debugTimeScale)
     timer.start()
   }
 
@@ -184,7 +186,6 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
 
   private def findCurrentPair(calendar: Calendar) = {
     val dateOrdering = implicitly[Ordering[SimpleTime]]
-    import dateOrdering._
     val now = SimpleTime(
       calendar.get(Calendar.HOUR_OF_DAY),
       calendar.get(Calendar.MINUTE)
