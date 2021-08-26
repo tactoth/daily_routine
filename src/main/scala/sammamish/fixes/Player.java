@@ -21,7 +21,7 @@ public class Player implements Closeable {
      * The MPEG audio bitstream.
      */
     // javac blank final bug.
-    /*final*/ private final Bitstream bitstream;
+    /*final*/ private final BitStreamWrapper bitStreamWrapper;
 
     /**
      * The MPEG audio decoder.
@@ -47,7 +47,7 @@ public class Player implements Closeable {
     }
 
     public Player(InputStream stream, AudioDevice device) throws JavaLayerException {
-        bitstream = new Bitstream(stream);
+        bitStreamWrapper = new BitStreamWrapper(new Bitstream(stream));
         decoder = new Decoder();
 
         if (device != null) {
@@ -101,7 +101,7 @@ public class Player implements Closeable {
             // calling this method.
             audio.close();
             try {
-                bitstream.close();
+                bitStreamWrapper.close();
             } catch (BitstreamException ignored) {
             }
         }
@@ -114,38 +114,50 @@ public class Player implements Closeable {
      */
     private boolean decodeFrame() throws JavaLayerException {
         try {
-            Header h = bitstream.readFrame();
-
-            if (h == null)
+            SampleBuffer output = bitStreamWrapper.read(decoder);
+            if (output == null)
                 return false;
 
-            // sample buffer set when decoder constructed
-            SampleBuffer output = (SampleBuffer) decoder.decodeFrame(h, bitstream);
-
             audio.write(output.getBuffer(), 0, output.getBufferLength());
-            bitstream.closeFrame();
+            bitStreamWrapper.closeFrame();
+            return true;
         } catch (RuntimeException ex) {
             throw new JavaLayerException("Exception decoding audio frame", ex);
         }
-/*
-		catch (IOException ex)
-		{
-			System.out.println("exception decoding audio frame: "+ex);
-			return false;
-		}
-		catch (BitstreamException bitex)
-		{
-			System.out.println("exception decoding audio frame: "+bitex);
-			return false;
-		}
-		catch (DecoderException decex)
-		{
-			System.out.println("exception decoding audio frame: "+decex);
-			return false;
-		}
-*/
-        return true;
     }
 
 
+    static class BitStreamWrapper {
+        final Bitstream stream;
+        boolean isClosed = false;
+
+        BitStreamWrapper(Bitstream stream) {
+            this.stream = stream;
+        }
+
+        synchronized void close() throws BitstreamException {
+            if (isClosed) return;
+
+            stream.close();
+            isClosed = true;
+        }
+
+        synchronized SampleBuffer read(Decoder decoder) throws DecoderException, BitstreamException {
+            if (isClosed) return null;
+
+            Header h = stream.readFrame();
+
+            if (h == null)
+                return null;
+
+            // sample buffer set when decoder constructed
+            return (SampleBuffer) decoder.decodeFrame(h, stream);
+        }
+
+        synchronized void closeFrame() {
+            if (isClosed) return;
+            stream.closeFrame();
+        }
+
+    }
 }
