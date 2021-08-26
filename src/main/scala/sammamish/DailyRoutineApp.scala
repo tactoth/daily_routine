@@ -87,19 +87,18 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       def addText(text: String, textSize: Int): Unit = {
         val view = new JLabel(text)
         view.setForeground(textColor)
-        view.setFont(new Font("Serif", Font.PLAIN, textSize))
+        view.setFont(new Font("Arial", Font.PLAIN, textSize))
         panel.add(view)
       }
 
       if (item.itemType != ItemType.Break || isActive) {
         addText(f"${item.time.hour}%02d:${item.time.minute}%02d", if (isActive) 32 else 14)
       }
-      addText(item.name.toUpperCase, 14)
+      addText(item.name, 14)
 
       // customize the cell
       val duration = nextItem.time.toMinutes - item.time.toMinutes
       bagConstraints.gridy += 1
-      bagConstraints.ipadx = if (isActive) 10 else 5
       bagConstraints.ipady = math.max(0, duration - 30) / 2
       frame.add(panel, bagConstraints)
     }
@@ -236,22 +235,22 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     val morningATypical = Seq(
       Item(SimpleTime(9, 30), "Plan the day", ItemType.Planning),
       Item(SimpleTime(9, 55), "Short break", ItemType.Break),
-      Item(SimpleTime(10, 0), "Focused block A", ItemType.Work)
+      Item(SimpleTime(10, 0), "Focus block A", ItemType.Work)
     )
 
     val morningB = Seq(
       Item(SimpleTime(11, 15), "Stretch break", ItemType.Break),
-      Item(SimpleTime(11, 30), "Focused block B", ItemType.Work),
+      Item(SimpleTime(11, 30), "Focus block B", ItemType.Work),
       Item(SimpleTime(12, 45), "Lunch break", ItemType.Relax)
     )
 
     // afternoon
     val afternoon = Seq(
-      Item(SimpleTime(14, 0), "Focused block C", ItemType.Work),
+      Item(SimpleTime(14, 0), "Focus block C", ItemType.Work),
       Item(SimpleTime(15, 15), "Break", ItemType.Break),
-      Item(SimpleTime(15, 30), "Focused block D", ItemType.Work),
+      Item(SimpleTime(15, 30), "Focus block D", ItemType.Work),
       Item(SimpleTime(16, 45), "Exercise Break", ItemType.Break),
-      Item(SimpleTime(17, 0), "Focused block E", ItemType.Work),
+      Item(SimpleTime(17, 0), "Focus block E", ItemType.Work),
       Item(SimpleTime(18, 0), "Family time", ItemType.Relax)
     )
 
@@ -259,7 +258,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     val eveningTypical = Seq(
       Item(SimpleTime(19, 30), "Evening work time 1", ItemType.Work),
       Item(SimpleTime(20, 45), "Break", ItemType.Break),
-      Item(SimpleTime(21, 0), "Evening closing time", ItemType.Work)
+      Item(SimpleTime(21, 0), "Evening work close", ItemType.Work)
     )
 
     val endItem = Item(SimpleTime(21, 30), "END", ItemType.Relax)
