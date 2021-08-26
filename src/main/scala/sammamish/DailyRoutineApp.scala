@@ -20,6 +20,9 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
   private val frame: JFrame = new JFrame()
   private val timer: Timer = new Timer(if (debug) 1000 else 15 * 1000, this)
 
+  private val debugStarted = System.currentTimeMillis()
+  private val debugTimeScale = if (debug) 500 else 1
+
   // progressing
   private var currentDayOfYear = -1
   private var currentItems: Seq[Item] = Seq.empty
@@ -33,10 +36,8 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     frame.setLayout(new GridBagLayout())
 
     // add ui
+    timer.setRepeats(false)
     maybeAdvanceDayOrItem()
-
-    // set layout
-    timer.start()
 
     // show window
     frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
@@ -111,7 +112,8 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
   private def maybeAdvanceDayOrItem() {
     val calendar = getCalendar
     val isItemsUpdated = maybeAdvanceToNewDay(calendar)
-    val currentItem = findCurrentItem(calendar)
+    val currentPair = findCurrentPair(calendar)
+    val currentItem = currentPair.map(_._1)
 
     val isItemUpdated: Boolean = {
       if (currentItem == this.currentItem) false
@@ -137,6 +139,18 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     if (isItemUpdated) {
       playMusicFor(currentItem.map(_.itemType).getOrElse(ItemType.Relax))
     }
+
+    // schedule next update
+    val delay = currentPair match {
+      case None => 60 * 1000 // 1min (we are inactive, if we set this to a value too long  when we are back....)
+      case Some((_, next)) => // estimate
+        val now = calendar.getTimeInMillis
+        calendar.set(Calendar.HOUR_OF_DAY, next.time.hour)
+        calendar.set(Calendar.MINUTE, next.time.minute)
+        (calendar.getTimeInMillis - now).toInt
+    }
+    timer.setInitialDelay(delay / debugTimeScale)
+    timer.start()
   }
 
   private def closeSound(): Unit = {
@@ -168,15 +182,14 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     })
   }
 
-  private def findCurrentItem(calendar: Calendar): Option[Item] = {
+  private def findCurrentPair(calendar: Calendar) = {
     val dateOrdering = implicitly[Ordering[SimpleTime]]
     import dateOrdering._
-
     val now = SimpleTime(
       calendar.get(Calendar.HOUR_OF_DAY),
       calendar.get(Calendar.MINUTE)
     )
-    itemPairs.find { case (first, second) => first.time <= now && second.time > now }.map { case (first, _) => first }
+    itemPairs.find { case (first, second) => first.time <= now && second.time > now }
   }
 
 
@@ -263,14 +276,13 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       endItem sortBy (_.time)
   }
 
-  private val debugStarted = System.currentTimeMillis()
 
   private def getCalendar = {
     if (debug) {
       val calendar = Calendar.getInstance()
       val fakeCal = Calendar.getInstance()
       fakeCal.set(2021, 7, 31, 9, 30)
-      calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * 500)
+      calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * debugTimeScale)
       calendar
     } else {
       Calendar.getInstance()
