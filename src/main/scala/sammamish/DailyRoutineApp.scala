@@ -185,12 +185,11 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
   }
 
   private def findCurrentPair(calendar: Calendar) = {
-    val dateOrdering = implicitly[Ordering[SimpleTime]]
     val now = SimpleTime(
       calendar.get(Calendar.HOUR_OF_DAY),
       calendar.get(Calendar.MINUTE)
     )
-    itemPairs.find { case (first, second) => first.time <= now && second.time > now }
+    itemPairs.find { case (first, second) => first.time.compareTo(now) <= 0 && second.time.compareTo(now) > 0 }
   }
 
 
