@@ -1,6 +1,7 @@
 package sammamish
 
-import javazoom.jl.player.Player
+
+import sammamish.fixes.Player
 
 import java.awt._
 import java.awt.event.{ActionEvent, ActionListener, WindowAdapter, WindowEvent}
@@ -147,7 +148,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
         val now = calendar.getTimeInMillis
         calendar.set(Calendar.HOUR_OF_DAY, next.time.hour)
         calendar.set(Calendar.MINUTE, next.time.minute)
-        (calendar.getTimeInMillis - now)
+        calendar.getTimeInMillis - now
     }
 
     // we are good, internally, absolute time is used, see timerQueue().addTimer, javax.swing.TimerQueue.DelayedTimer.getDelay
@@ -281,7 +282,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
     if (debug) {
       val calendar = Calendar.getInstance()
       val fakeCal = Calendar.getInstance()
-      fakeCal.set(2021, 7, 31, 9, 30)
+      fakeCal.set(2021, 7, 31, 12, 0)
       calendar.setTimeInMillis(fakeCal.getTimeInMillis + (System.currentTimeMillis() - debugStarted) * debugTimeScale)
       calendar
     } else {
