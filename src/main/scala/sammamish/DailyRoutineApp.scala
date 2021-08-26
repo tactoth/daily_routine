@@ -72,7 +72,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
       panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS))
 
       val isActive = currentItem.contains(item)
-      val isPast = currentItem.exists(_.time.compareTo(item.time) > 0)
+      val isPast = currentItem.forall(_.time.compareTo(item.time) > 0)
 
       val colorPair = item.itemType match {
         case ItemType.Planning => planningColor
