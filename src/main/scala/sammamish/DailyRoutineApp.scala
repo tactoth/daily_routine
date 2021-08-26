@@ -149,7 +149,7 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
         calendar.set(Calendar.MINUTE, next.time.minute)
         (calendar.getTimeInMillis - now).toInt
     }
-    timer.setInitialDelay(delay / debugTimeScale)
+    timer.setInitialDelay(delay / debugTimeScale) // not sure how this works when device is in stand by mode
     timer.start()
   }
 
