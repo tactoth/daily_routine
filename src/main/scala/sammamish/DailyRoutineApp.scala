@@ -169,9 +169,9 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
 
     // sounds downloaded from https://www.zapsplat.com/sound-effect-category/church-bells/
     val musicFile = itemType match {
-      case ItemType.Break => "data/zapsplat_musical_retro_classic_vibraphone_mystery_tone_002_45104.mp3" // break
+      case ItemType.Break => "data/audeption_church_bell_with_street_and_some_birds_010.mp3" // break
       case ItemType.Relax => "data/zapsplat_musical_heavely_euphoria_happy_dreamy_swell_001_1860950.mp3" // relax or end of work
-      case _ /*ItemType.Planning || ItemType.Work */ => "data/audeption_church_bell_with_street_and_some_birds_010.mp3" // work
+      case _ /*ItemType.Planning || ItemType.Work */ => "data/zapsplat_bell_service_disk_ring_slightly_broken_resonate_multiple_18041.mp3" // work
     }
 
     executor.execute(new Runnable {
