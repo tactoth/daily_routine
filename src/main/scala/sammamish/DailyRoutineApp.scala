@@ -12,10 +12,10 @@ import javax.swing._
 import scala.ref.WeakReference
 
 class DailyRoutineApp(debug: Boolean) extends ActionListener {
-  private val planningColor = ColorPair(new Color(0xBF360C), new Color(0xFF5722))
-  private val workColor = ColorPair(new Color(0x1A237E), new Color(0x5C6BC0))
-  private val breakColor = ColorPair(new Color(0x006064), new Color(0x00BCD4))
-  private val relaxColor = ColorPair(new Color(0x1B5E20), new Color(0x43A047))
+  private val planningColor = ColorPair(new Color(0xBF360C), new Color(0xFF8A65))
+  private val workColor = ColorPair(new Color(0x1A237E), new Color(0x9FA8DA))
+  private val breakColor = ColorPair(new Color(0x33691E), new Color(0xC5E1A5))
+  private val relaxColor = ColorPair(new Color(0x1B5E20), new Color(0x81C784))
 
   private val executor = Executors.newSingleThreadExecutor()
   private val frame: JFrame = new JFrame()
@@ -92,9 +92,14 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
         panel.add(view)
       }
 
-      if (item.itemType != ItemType.Break || isActive) {
-        addText(f"${item.time.hour}%02d:${item.time.minute}%02d", if (isActive) 32 else 14)
+      def formatTime(time: SimpleTime) = f"${time.hour}%02d:${time.minute}%02d"
+
+      if (isActive) {
+        addText(formatTime(item.time), 20)
+      } else if (item.itemType != ItemType.Break) {
+        addText(formatTime(item.time), 14)
       }
+
       addText(item.name, 14)
 
       // customize the cell
@@ -257,9 +262,9 @@ class DailyRoutineApp(debug: Boolean) extends ActionListener {
 
     // evening
     val eveningTypical = Seq(
-      Item(SimpleTime(19, 30), "Evening work time 1", ItemType.Work),
+      Item(SimpleTime(19, 30), "Focus block F", ItemType.Work),
       Item(SimpleTime(20, 45), "Break", ItemType.Break),
-      Item(SimpleTime(21, 0), "Evening work close", ItemType.Work)
+      Item(SimpleTime(21, 0), "Close", ItemType.Work)
     )
 
     val endItem = Item(SimpleTime(21, 30), "END", ItemType.Relax)
